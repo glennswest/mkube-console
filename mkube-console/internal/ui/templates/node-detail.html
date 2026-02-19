@@ -1,0 +1,65 @@
+{{define "node-detail-content"}}
+<h1 class="page-title">{{.Content.Node.Name}}</h1>
+<p class="page-subtitle">mkube node details</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Status</div>
+    <div class="stat-value"><span class="release-badge {{.Content.Node.StatusClass}}">{{.Content.Node.Status}}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">CPU</div>
+    <div class="stat-value blue">{{.Content.Node.CPU}}</div>
+    {{if .Content.Node.CPULoad}}<div class="stat-detail">{{.Content.Node.CPULoad}}% load</div>{{end}}
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Memory</div>
+    <div class="stat-value green">{{.Content.Node.Memory}}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Uptime</div>
+    <div class="stat-value" style="font-size:16px">{{.Content.Node.Uptime}}</div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Architecture</div>
+    <div class="stat-value" style="font-size:16px">{{.Content.Node.Architecture}}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Board</div>
+    <div class="stat-value" style="font-size:16px">{{.Content.Node.Board}}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pods Available</div>
+    <div class="stat-value purple">{{.Content.Node.Pods}}</div>
+  </div>
+</div>
+
+{{if .Content.Pods}}
+<div class="section">
+  <div class="section-title">Pods on this Node <span class="count">{{len .Content.Pods}}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Namespace</th>
+          <th>Node</th>
+          <th>Status</th>
+          <th>IP</th>
+          <th>Ready</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Content.Pods}}
+        {{template "pod-row" .}}
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+{{end}}

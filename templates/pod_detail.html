@@ -1,0 +1,116 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<div class="page-header-row">
+  <div>
+    <h1 class="page-title">{{ pod.name }}</h1>
+    <p class="page-subtitle">{{ pod.namespace }} namespace on {{ node }}</p>
+  </div>
+  <div x-data="{ confirm: false }">
+    <button class="btn btn-danger" x-show="!confirm" @click="confirm = true">Delete Pod</button>
+    <div x-show="confirm" x-cloak style="display:flex;gap:8px;align-items:center">
+      <span style="color:var(--accent-red);font-size:13px">Delete this pod?</span>
+      <button class="btn btn-danger" @click="
+        fetch('/api/v1/namespaces/{{ pod.namespace }}/pods/{{ pod.name }}', {method:'DELETE'})
+        .then(r => { if(r.ok) window.location='/ui/pods'; else r.text().then(t => alert(t)); })
+      ">Confirm</button>
+      <button class="btn btn-ghost" @click="confirm = false">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Status</div>
+    <div class="stat-value"><span class="release-badge {{ pod.status_class }}">{{ pod.status }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">IP</div>
+    <div class="stat-value mono" style="font-size:16px">{{ pod.ip }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Ready</div>
+    <div class="stat-value blue">{{ pod.ready }}/{{ pod.containers }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Age</div>
+    <div class="stat-value" style="font-size:16px">{{ pod.age }}</div>
+  </div>
+</div>
+
+{% if !containers.is_empty() %}
+<div class="section">
+  <div class="section-title">Containers <span class="count">{{ containers.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Image</th>
+          <th>State</th>
+          <th>Ready</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in containers %}
+        <tr>
+          <td>{{ c.name }}</td>
+          <td class="mono" style="font-size:12px">{{ c.image }}</td>
+          <td>
+            {% if c.state == "Running" %}<span class="release-badge badge-success">Running</span>
+            {% else if c.state == "Waiting" %}<span class="release-badge badge-warning">Waiting: {{ c.reason }}</span>
+            {% else %}<span class="release-badge badge-error">{{ c.state }}: {{ c.reason }}</span>
+            {% endif %}
+          </td>
+          <td>{% if c.ready %}<span class="release-badge badge-success">Yes</span>{% else %}<span class="release-badge badge-error">No</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if !volumes.is_empty() %}
+<div class="section">
+  <div class="section-title">Volume Mounts <span class="count">{{ volumes.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr><th>Name</th><th>Mount Path</th></tr>
+      </thead>
+      <tbody>
+        {% for v in volumes %}
+        <tr><td>{{ v.name }}</td><td class="mono">{{ v.mount_path }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if !annotations.is_empty() %}
+<div class="section">
+  <div class="section-title">Annotations</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr><th>Key</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        {% for (k, v) in annotations %}
+        <tr><td class="mono" style="font-size:12px">{{ k }}</td><td>{{ v }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="section">
+  <div class="section-title">Logs</div>
+  <div class="log-viewer" hx-get="/api/v1/namespaces/{{ pod.namespace }}/pods/{{ pod.name }}/log" hx-trigger="load, every 3s" hx-swap="innerHTML">
+    <div class="log-loading">Loading logs...</div>
+  </div>
+</div>
+{% endblock %}

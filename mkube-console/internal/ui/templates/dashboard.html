@@ -1,0 +1,91 @@
+{{define "dashboard-content"}}
+<h1 class="page-title">Cluster Dashboard</h1>
+<p class="page-subtitle">Overview of your mkube cluster</p>
+
+<div class="stats-row" hx-get="/ui/" hx-trigger="every 10s" hx-select=".stats-row" hx-swap="outerHTML">
+  <div class="stat-card">
+    <div class="stat-label">Nodes</div>
+    <div class="stat-value blue">{{.Content.NodeCount}}</div>
+    <div class="stat-detail">{{.Content.HealthyNodes}} healthy</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pods</div>
+    <div class="stat-value green">{{.Content.PodCount}}</div>
+    <div class="stat-detail">{{.Content.RunningPods}} running</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Health</div>
+    {{if eq .Content.HealthyNodes .Content.NodeCount}}
+    <div class="stat-value green">Healthy</div>
+    {{else}}
+    <div class="stat-value yellow">Degraded</div>
+    {{end}}
+    <div class="stat-detail">{{.Content.HealthyNodes}}/{{.Content.NodeCount}} nodes online</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Workloads</div>
+    <div class="stat-value purple">{{.Content.RunningPods}}/{{.Content.PodCount}}</div>
+    <div class="stat-detail">pods running</div>
+  </div>
+</div>
+
+{{if .Content.Nodes}}
+<div class="section">
+  <div class="section-title">Nodes</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Pods</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Content.Nodes}}
+        <tr>
+          <td><a href="/ui/nodes/{{.Name}}">{{.Name}}</a></td>
+          <td>
+            {{if .Healthy}}
+            <span class="release-badge badge-success">Ready</span>
+            {{else}}
+            <span class="release-badge badge-error">NotReady</span>
+            {{end}}
+          </td>
+          <td>{{.PodCount}}</td>
+          <td>{{if .LastPing.IsZero}}-{{else}}{{humanTime .LastPing}}{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+
+{{if .Content.RecentPods}}
+<div class="section">
+  <div class="section-title">Recent Pods <span class="count">{{len .Content.RecentPods}}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Namespace</th>
+          <th>Node</th>
+          <th>Status</th>
+          <th>IP</th>
+          <th>Ready</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Content.RecentPods}}
+        {{template "pod-row" .}}
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+{{end}}

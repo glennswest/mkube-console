@@ -1,0 +1,114 @@
+{{define "pod-detail-content"}}
+<div class="page-header-row">
+  <div>
+    <h1 class="page-title">{{.Content.Pod.Name}}</h1>
+    <p class="page-subtitle">{{.Content.Pod.Namespace}} namespace on {{.Content.Node}}</p>
+  </div>
+  <div x-data="{ confirm: false }">
+    <button class="btn btn-danger" x-show="!confirm" @click="confirm = true">Delete Pod</button>
+    <div x-show="confirm" x-cloak style="display:flex;gap:8px;align-items:center">
+      <span style="color:var(--accent-red);font-size:13px">Delete this pod?</span>
+      <button class="btn btn-danger" @click="
+        fetch('/api/v1/namespaces/{{.Content.Pod.Namespace}}/pods/{{.Content.Pod.Name}}', {method:'DELETE'})
+        .then(r => { if(r.ok) window.location='/ui/pods'; else r.text().then(t => alert(t)); })
+      ">Confirm</button>
+      <button class="btn btn-ghost" @click="confirm = false">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Status</div>
+    <div class="stat-value"><span class="release-badge {{.Content.Pod.StatusClass}}">{{.Content.Pod.Status}}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">IP</div>
+    <div class="stat-value mono" style="font-size:16px">{{.Content.Pod.IP}}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Ready</div>
+    <div class="stat-value blue">{{.Content.Pod.Ready}}/{{.Content.Pod.Containers}}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Age</div>
+    <div class="stat-value" style="font-size:16px">{{.Content.Pod.Age}}</div>
+  </div>
+</div>
+
+{{if .Content.Containers}}
+<div class="section">
+  <div class="section-title">Containers <span class="count">{{len .Content.Containers}}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Image</th>
+          <th>State</th>
+          <th>Ready</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Content.Containers}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td class="mono" style="font-size:12px">{{.Image}}</td>
+          <td>
+            {{if eq .State "Running"}}<span class="release-badge badge-success">Running</span>
+            {{else if eq .State "Waiting"}}<span class="release-badge badge-warning">Waiting: {{.Reason}}</span>
+            {{else}}<span class="release-badge badge-error">{{.State}}: {{.Reason}}</span>
+            {{end}}
+          </td>
+          <td>{{if .Ready}}<span class="release-badge badge-success">Yes</span>{{else}}<span class="release-badge badge-error">No</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+
+{{if .Content.Volumes}}
+<div class="section">
+  <div class="section-title">Volume Mounts <span class="count">{{len .Content.Volumes}}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr><th>Name</th><th>Mount Path</th></tr>
+      </thead>
+      <tbody>
+        {{range .Content.Volumes}}
+        <tr><td>{{.Name}}</td><td class="mono">{{.MountPath}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+
+{{if .Content.Annotations}}
+<div class="section">
+  <div class="section-title">Annotations</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr><th>Key</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        {{range $k, $v := .Content.Annotations}}
+        <tr><td class="mono" style="font-size:12px">{{$k}}</td><td>{{$v}}</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
+
+<div class="section">
+  <div class="section-title">Logs</div>
+  <div class="log-viewer" hx-get="/api/v1/namespaces/{{.Content.Pod.Namespace}}/pods/{{.Content.Pod.Name}}/log" hx-trigger="load, every 3s" hx-swap="innerHTML">
+    <div class="log-loading">Loading logs...</div>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+{% import "macros.html" as macros %}
+
+{% block page_content %}
+<h1 class="page-title">{{ node.name }}</h1>
+<p class="page-subtitle">mkube node details</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Status</div>
+    <div class="stat-value"><span class="release-badge {{ node.status_class }}">{{ node.status }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">CPU</div>
+    <div class="stat-value blue">{{ node.cpu }}</div>
+    {% if !node.cpu_load.is_empty() %}<div class="stat-detail">{{ node.cpu_load }}% load</div>{% endif %}
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Memory</div>
+    <div class="stat-value green">{{ node.memory }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Uptime</div>
+    <div class="stat-value" style="font-size:16px">{{ node.uptime }}</div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Architecture</div>
+    <div class="stat-value" style="font-size:16px">{{ node.architecture }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Board</div>
+    <div class="stat-value" style="font-size:16px">{{ node.board }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pods Available</div>
+    <div class="stat-value purple">{{ node.pods }}</div>
+  </div>
+</div>
+
+{% if !pods.is_empty() %}
+<div class="section">
+  <div class="section-title">Pods on this Node <span class="count">{{ pods.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Namespace</th>
+          <th>Node</th>
+          <th>Status</th>
+          <th>IP</th>
+          <th>Ready</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pods %}
+        {% call macros::pod_row(p) %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

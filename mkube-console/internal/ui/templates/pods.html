@@ -1,0 +1,67 @@
+{{define "pods-content"}}
+<h1 class="page-title">Pods</h1>
+<p class="page-subtitle">Manage workloads across your cluster</p>
+
+<div class="toolbar">
+  <div class="toolbar-left">
+    <select onchange="window.location='/ui/pods?namespace='+this.value">
+      <option value="">All Namespaces</option>
+      {{range .Content.Namespaces}}
+      <option value="{{.}}"{{if eq . $.Content.Filter}} selected{{end}}>{{.}}</option>
+      {{end}}
+    </select>
+    <span class="count">{{len .Content.Pods}} pods</span>
+  </div>
+  <div class="toolbar-right" x-data="{ showCreate: false }">
+    <button class="btn btn-primary" @click="showCreate = !showCreate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Create Pod
+    </button>
+    <div class="modal-overlay" x-show="showCreate" x-cloak @click.self="showCreate = false">
+      <div class="modal">
+        <h3>Create Pod</h3>
+        <p class="page-subtitle">Paste your pod YAML/JSON below</p>
+        <form x-data="{ yaml: '' }" @submit.prevent="
+          fetch('/api/v1/namespaces/default/pods', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: yaml
+          }).then(r => {
+            if(r.ok) { showCreate = false; window.location.reload(); }
+            else r.text().then(t => alert('Error: ' + t));
+          })
+        ">
+          <textarea class="yaml-input" x-model="yaml" placeholder='{"apiVersion":"v1","kind":"Pod",...}' rows="12"></textarea>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" @click="showCreate = false">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="table-wrapper" hx-get="/ui/pods{{if .Content.Filter}}?namespace={{.Content.Filter}}{{end}}" hx-trigger="every 5s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Namespace</th>
+        <th>Node</th>
+        <th>Status</th>
+        <th>IP</th>
+        <th>Ready</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Content.Pods}}
+      {{template "pod-row" .}}
+      {{else}}
+      <tr><td colspan="7" class="empty-state"><h3>No pods found</h3></td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

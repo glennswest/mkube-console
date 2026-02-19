@@ -1,0 +1,23 @@
+{% macro pod_row(p) %}
+<tr>
+  <td><a href="/ui/pods/{{ p.namespace }}/{{ p.name }}">{{ p.name }}</a></td>
+  <td>{{ p.namespace }}</td>
+  <td>{{ p.node }}</td>
+  <td><span class="release-badge {{ p.status_class }}">{{ p.status }}</span></td>
+  <td class="mono">{{ p.ip }}</td>
+  <td>{{ p.ready }}/{{ p.containers }}</td>
+  <td>{{ p.age }}</td>
+</tr>
+{% endmacro %}
+
+{% macro node_row(n) %}
+<tr>
+  <td><a href="/ui/nodes/{{ n.name }}">{{ n.name }}</a></td>
+  <td><span class="release-badge {{ n.status_class }}">{{ n.status }}</span></td>
+  <td>{{ n.cpu }}</td>
+  <td>{{ n.memory }}</td>
+  <td>{{ n.pods }}</td>
+  <td>{{ n.uptime }}</td>
+  <td>{{ n.architecture }}</td>
+</tr>
+{% endmacro %}

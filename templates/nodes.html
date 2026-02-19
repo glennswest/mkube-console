@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% import "macros.html" as macros %}
+
+{% block page_content %}
+<h1 class="page-title">Nodes</h1>
+<p class="page-subtitle">mkube cluster nodes</p>
+
+<div class="table-wrapper" hx-get="/ui/nodes" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>CPU</th>
+        <th>Memory</th>
+        <th>Pods Available</th>
+        <th>Uptime</th>
+        <th>Architecture</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if nodes.is_empty() %}
+      <tr><td colspan="7" class="empty-state"><h3>No nodes found</h3></td></tr>
+      {% else %}
+      {% for n in nodes %}
+      {% call macros::node_row(n) %}
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

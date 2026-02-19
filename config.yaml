@@ -1,0 +1,44 @@
+cluster_name: rose1
+listen_port: 8080
+
+routeros:
+  base_url: "http://192.168.200.1/rest"
+  username: admin
+  # password via ROUTEROS_PASSWORD env var
+
+mkube:
+  base_url: "http://192.168.200.2:8082"
+
+registry:
+  base_url: "http://192.168.200.2:5000"
+
+networks:
+  - name: mgmt
+    bridge: br-mgmt
+    cidr: "192.168.200.0/24"
+    gateway: "192.168.200.1"
+    dns_endpoint: null
+
+  - name: net1
+    bridge: br-net1
+    cidr: "10.100.1.0/24"
+    gateway: "10.100.1.1"
+    dns_endpoint: "http://192.168.200.199:8080"
+
+  - name: net2
+    bridge: br-net2
+    cidr: "10.100.2.0/24"
+    gateway: "10.100.2.1"
+    dns_endpoint: "http://192.168.200.198:8080"
+
+  - name: net3
+    bridge: br-net3
+    cidr: "10.100.3.0/24"
+    gateway: "10.100.3.1"
+    dns_endpoint: "http://192.168.200.197:8080"
+
+  - name: net4
+    bridge: br-net4
+    cidr: "10.100.4.0/24"
+    gateway: "10.100.4.1"
+    dns_endpoint: "http://192.168.200.196:8080"

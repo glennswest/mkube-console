@@ -1,0 +1,94 @@
+{% extends "layout.html" %}
+{% import "macros.html" as macros %}
+
+{% block page_content %}
+<h1 class="page-title">Cluster Dashboard</h1>
+<p class="page-subtitle">Overview of your mkube cluster</p>
+
+<div class="stats-row" hx-get="/ui/" hx-trigger="every 10s" hx-select=".stats-row" hx-swap="outerHTML">
+  <div class="stat-card">
+    <div class="stat-label">Nodes</div>
+    <div class="stat-value blue">{{ node_count }}</div>
+    <div class="stat-detail">{{ healthy_nodes }} healthy</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pods</div>
+    <div class="stat-value green">{{ pod_count }}</div>
+    <div class="stat-detail">{{ running_pods }} running</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Health</div>
+    {% if healthy_nodes == node_count %}
+    <div class="stat-value green">Healthy</div>
+    {% else %}
+    <div class="stat-value yellow">Degraded</div>
+    {% endif %}
+    <div class="stat-detail">{{ healthy_nodes }}/{{ node_count }} nodes online</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Workloads</div>
+    <div class="stat-value purple">{{ running_pods }}/{{ pod_count }}</div>
+    <div class="stat-detail">pods running</div>
+  </div>
+</div>
+
+{% if !nodes.is_empty() %}
+<div class="section">
+  <div class="section-title">Nodes</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Pods</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in nodes %}
+        <tr>
+          <td><a href="/ui/nodes/{{ n.name }}">{{ n.name }}</a></td>
+          <td>
+            {% if n.healthy %}
+            <span class="release-badge badge-success">Ready</span>
+            {% else %}
+            <span class="release-badge badge-error">NotReady</span>
+            {% endif %}
+          </td>
+          <td>{{ n.pod_count }}</td>
+          <td>{{ n.last_ping_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if !recent_pods.is_empty() %}
+<div class="section">
+  <div class="section-title">Recent Pods <span class="count">{{ recent_pods.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Namespace</th>
+          <th>Node</th>
+          <th>Status</th>
+          <th>IP</th>
+          <th>Ready</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_pods %}
+        {% call macros::pod_row(p) %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

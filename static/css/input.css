@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-mkube-bg: #18181b;
+  --color-mkube-sidebar: #09090b;
+  --color-mkube-card: #27272a;
+  --color-mkube-border: #3f3f46;
+  --color-mkube-active: #3b82f6;
+  --color-mkube-text: #fafafa;
+  --color-mkube-muted: #a1a1aa;
+  --color-status-running: #22c55e;
+  --color-status-stopped: #ef4444;
+  --color-status-pending: #eab308;
+}
+
+body {
+  background-color: var(--color-mkube-bg);
+  color: var(--color-mkube-text);
+}
+
+.htmx-indicator {
+  opacity: 0;
+  transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  opacity: 1;
+}
+
+/* Log viewer */
+.log-container {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.log-container .log-line:nth-child(odd) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-mkube-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-mkube-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
