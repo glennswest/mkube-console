@@ -46,6 +46,16 @@ pub struct VolumeView {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct NamespaceView {
+    pub name: String,
+    pub pod_count: usize,
+    pub running: usize,
+    pub pending: usize,
+    pub failed: usize,
+    pub status_class: String,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct NodeView {
     pub name: String,
     pub status: String,

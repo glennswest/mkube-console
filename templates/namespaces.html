@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Namespaces</h1>
+<p class="page-subtitle">Workload namespaces across your cluster</p>
+
+<div class="table-wrapper" hx-get="/ui/namespaces" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Pods</th>
+        <th>Running</th>
+        <th>Pending</th>
+        <th>Failed</th>
+        <th>Health</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if namespaces.is_empty() %}
+      <tr><td colspan="6" class="empty-state"><h3>No namespaces found</h3></td></tr>
+      {% else %}
+      {% for ns in namespaces %}
+      <tr>
+        <td><a href="/ui/pods?namespace={{ ns.name }}">{{ ns.name }}</a></td>
+        <td>{{ ns.pod_count }}</td>
+        <td>{{ ns.running }}</td>
+        <td>{{ ns.pending }}</td>
+        <td>{{ ns.failed }}</td>
+        <td>
+          {% if ns.failed > 0 %}
+          <span class="release-badge badge-error">Degraded</span>
+          {% elif ns.pending > 0 %}
+          <span class="release-badge badge-warning">Pending</span>
+          {% else %}
+          <span class="release-badge badge-success">Healthy</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

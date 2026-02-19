@@ -35,6 +35,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/healthz", get(api::handle_healthz))
         // Dashboard UI
         .route("/ui/", get(ui::handle_dashboard))
+        .route("/ui/namespaces", get(ui::handle_namespaces))
         .route("/ui/pods", get(ui::handle_pods))
         .route("/ui/pods/{namespace}/{name}", get(ui::handle_pod_detail))
         .route("/ui/nodes", get(ui::handle_nodes))

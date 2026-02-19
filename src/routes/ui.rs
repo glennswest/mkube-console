@@ -12,6 +12,72 @@ use crate::models::k8s;
 use crate::models::views::*;
 use crate::AppState;
 
+// --- Namespaces ---
+
+#[derive(Template)]
+#[template(path = "namespaces.html")]
+struct NamespacesTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    namespaces: Vec<NamespaceView>,
+}
+
+pub async fn handle_namespaces(State(state): State<AppState>) -> Response {
+    let all_pods = state.aggregator.list_all_pods().await.unwrap_or_default();
+
+    let mut ns_map: std::collections::BTreeMap<String, NamespaceView> =
+        std::collections::BTreeMap::new();
+
+    for pod in &all_pods {
+        let entry = ns_map
+            .entry(pod.metadata.namespace.clone())
+            .or_insert_with(|| NamespaceView {
+                name: pod.metadata.namespace.clone(),
+                ..Default::default()
+            });
+        entry.pod_count += 1;
+        match pod.status.phase.as_str() {
+            "Running" => entry.running += 1,
+            "Pending" => entry.pending += 1,
+            "Failed" => entry.failed += 1,
+            _ => {}
+        }
+    }
+
+    let namespaces: Vec<NamespaceView> = ns_map
+        .into_values()
+        .map(|mut ns| {
+            ns.status_class = if ns.failed > 0 {
+                "badge-error".to_string()
+            } else if ns.pending > 0 {
+                "badge-warning".to_string()
+            } else {
+                "badge-success".to_string()
+            };
+            ns
+        })
+        .collect();
+
+    let tmpl = NamespacesTemplate {
+        title: "Namespaces".to_string(),
+        current_nav: "namespaces".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb {
+                label: "Dashboard".to_string(),
+                url: "/ui/".to_string(),
+            },
+            Breadcrumb {
+                label: "Namespaces".to_string(),
+                url: "/ui/namespaces".to_string(),
+            },
+        ],
+        namespaces,
+    };
+
+    render_template(&tmpl)
+}
+
 // --- View Builders ---
 
 fn build_pod_view(pod: &k8s::Pod) -> PodView {
