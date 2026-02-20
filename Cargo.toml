@@ -7,7 +7,7 @@ edition = "2024"
 axum = { version = "0.8", features = ["ws", "macros"] }
 askama = "0.13"
 tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
@@ -17,4 +17,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 futures-util = "0.3"
+tokio-util = { version = "0.7", features = ["io"] }
+tokio-stream = { version = "0.1", features = ["io-util"] }
 base64 = "0.22"

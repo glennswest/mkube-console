@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% import "macros.html" as m %}
+
+{% block page_content %}
+<div class="page-header-row">
+  <div>
+    <h1 class="page-title">{{ namespace_name }}</h1>
+    <p class="page-subtitle">Namespace overview</p>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Total Pods</div>
+    <div class="stat-value">{{ pod_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Running</div>
+    <div class="stat-value green">{{ running }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pending</div>
+    <div class="stat-value yellow">{{ pending }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Failed</div>
+    <div class="stat-value red">{{ failed }}</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Pods <span class="count">{{ pods.len() }}</span></div>
+  <div class="table-wrapper" hx-get="/ui/namespaces/{{ namespace_name }}" hx-trigger="every 5s" hx-select=".table-wrapper" hx-swap="outerHTML">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Node</th>
+          <th>Status</th>
+          <th>IP</th>
+          <th>Ready</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if pods.is_empty() %}
+        <tr><td colspan="6" class="empty-state"><h3>No pods in this namespace</h3></td></tr>
+        {% else %}
+        {% for p in pods %}
+        <tr>
+          <td><a href="/ui/namespaces/{{ namespace_name }}/pods/{{ p.name }}">{{ p.name }}</a></td>
+          <td>{{ p.node }}</td>
+          <td><span class="release-badge {{ p.status_class }}">{{ p.status }}</span></td>
+          <td class="mono">{{ p.ip }}</td>
+          <td>{{ p.ready }}/{{ p.containers }}</td>
+          <td>{{ p.age }}</td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

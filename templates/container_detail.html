@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<div class="page-header-row">
+  <div>
+    <h1 class="page-title">{{ container.name }}</h1>
+    <p class="page-subtitle">Container in {{ container.pod_name }} / {{ container.namespace }}</p>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">State</div>
+    <div class="stat-value"><span class="release-badge {{ container.state_class }}">{{ container.state }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Ready</div>
+    <div class="stat-value">{% if container.ready %}<span class="release-badge badge-success">Yes</span>{% else %}<span class="release-badge badge-error">No</span>{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Image</div>
+    <div class="stat-value mono" style="font-size:13px;word-break:break-all">{{ container.image }}</div>
+  </div>
+</div>
+
+{% if !container.volume_mounts.is_empty() %}
+<div class="section">
+  <div class="section-title">Volume Mounts <span class="count">{{ container.volume_mounts.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr><th>Name</th><th>Mount Path</th></tr>
+      </thead>
+      <tbody>
+        {% for v in container.volume_mounts %}
+        <tr><td>{{ v.name }}</td><td class="mono">{{ v.mount_path }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="section">
+  <div class="section-title">Logs</div>
+  <div class="log-viewer" hx-get="/api/v1/namespaces/{{ container.namespace }}/pods/{{ container.pod_name }}/log?container={{ container.name }}" hx-trigger="load, every 3s" hx-swap="innerHTML">
+    <div class="log-loading">Loading logs...</div>
+  </div>
+</div>
+{% endblock %}

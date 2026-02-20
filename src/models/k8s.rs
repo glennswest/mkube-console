@@ -257,6 +257,16 @@ pub struct ApiResource {
     pub verbs: Vec<String>,
 }
 
+// --- Watch Events ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct WatchEvent {
+    #[serde(rename = "type")]
+    pub event_type: String,
+    pub object: Pod,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {

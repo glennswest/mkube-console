@@ -246,4 +246,8 @@ impl Aggregator {
     async fn snapshot(&self) -> Vec<Arc<NodeClient>> {
         self.clients.read().await.values().cloned().collect()
     }
+
+    pub async fn snapshot_clients(&self) -> Vec<Arc<NodeClient>> {
+        self.snapshot().await
+    }
 }

@@ -56,6 +56,18 @@ pub struct NamespaceView {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct ContainerDetailView {
+    pub name: String,
+    pub pod_name: String,
+    pub namespace: String,
+    pub image: String,
+    pub state: String,
+    pub state_class: String,
+    pub ready: bool,
+    pub volume_mounts: Vec<VolumeView>,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct NodeView {
     pub name: String,
     pub status: String,

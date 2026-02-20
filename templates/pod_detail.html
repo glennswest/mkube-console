@@ -54,7 +54,7 @@
       <tbody>
         {% for c in containers %}
         <tr>
-          <td>{{ c.name }}</td>
+          <td><a href="/ui/namespaces/{{ pod.namespace }}/pods/{{ pod.name }}/containers/{{ c.name }}">{{ c.name }}</a></td>
           <td class="mono" style="font-size:12px">{{ c.image }}</td>
           <td>
             {% if c.state == "Running" %}<span class="release-badge badge-success">Running</span>
@@ -107,10 +107,4 @@
 </div>
 {% endif %}
 
-<div class="section">
-  <div class="section-title">Logs</div>
-  <div class="log-viewer" hx-get="/api/v1/namespaces/{{ pod.namespace }}/pods/{{ pod.name }}/log" hx-trigger="load, every 3s" hx-swap="innerHTML">
-    <div class="log-loading">Loading logs...</div>
-  </div>
-</div>
 {% endblock %}

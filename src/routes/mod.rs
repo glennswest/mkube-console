@@ -1,4 +1,5 @@
 pub mod api;
+pub mod sse;
 pub mod ui;
 
 use axum::{
@@ -36,12 +37,16 @@ pub fn build_router(state: AppState) -> Router {
         // Dashboard UI
         .route("/ui/", get(ui::handle_dashboard))
         .route("/ui/namespaces", get(ui::handle_namespaces))
+        .route("/ui/namespaces/{name}", get(ui::handle_namespace_detail))
+        .route("/ui/namespaces/{namespace}/pods/{name}", get(ui::handle_pod_detail))
+        .route("/ui/namespaces/{namespace}/pods/{pod}/containers/{name}", get(ui::handle_container_detail))
+        // SSE events
+        .route("/ui/events/pods", get(sse::handle_pod_events))
         .route("/ui/pods", get(ui::handle_pods))
         .route("/ui/pods/{namespace}/{name}", get(ui::handle_pod_detail))
         .route("/ui/nodes", get(ui::handle_nodes))
         .route("/ui/nodes/{name}", get(ui::handle_node_detail))
         .route("/ui/registry", get(ui::handle_registry))
-        .route("/ui/logs", get(ui::handle_logs))
         // Static files
         .nest_service("/ui/static", ServeDir::new("static"))
         // Root redirect

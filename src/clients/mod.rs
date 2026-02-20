@@ -135,6 +135,45 @@ impl NodeClient {
         self.get_json(&format!("/api/v1/nodes/{}", self.name)).await
     }
 
+    pub async fn watch_pods(
+        &self,
+    ) -> Result<reqwest::Response, Box<dyn std::error::Error + Send + Sync>> {
+        let resp = self
+            .http
+            .get(format!("{}/api/v1/pods?watch=true", self.address))
+            .header("Accept", "application/json")
+            .send()
+            .await?;
+
+        if resp.status().as_u16() >= 400 {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("watch pods failed: {}", body).into());
+        }
+        Ok(resp)
+    }
+
+    pub async fn get_container_log(
+        &self,
+        ns: &str,
+        pod_name: &str,
+        container_name: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let resp = self
+            .http
+            .get(format!(
+                "{}/api/v1/namespaces/{}/pods/{}/log?container={}",
+                self.address, ns, pod_name, container_name
+            ))
+            .send()
+            .await?;
+
+        if resp.status().as_u16() >= 400 {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("get container log failed: {}", body).into());
+        }
+        Ok(resp.text().await?)
+    }
+
     async fn get_json<T: DeserializeOwned>(
         &self,
         path: &str,

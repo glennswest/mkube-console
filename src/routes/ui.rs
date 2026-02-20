@@ -78,6 +78,180 @@ pub async fn handle_namespaces(State(state): State<AppState>) -> Response {
     render_template(&tmpl)
 }
 
+// --- Namespace Detail ---
+
+#[derive(Template)]
+#[template(path = "namespace_detail.html")]
+struct NamespaceDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    namespace_name: String,
+    pod_count: usize,
+    running: usize,
+    pending: usize,
+    failed: usize,
+    pods: Vec<PodView>,
+}
+
+pub async fn handle_namespace_detail(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Response {
+    let all_pods = state.aggregator.list_all_pods().await.unwrap_or_default();
+
+    let mut running = 0usize;
+    let mut pending = 0usize;
+    let mut failed = 0usize;
+    let mut pod_views = Vec::new();
+
+    for pod in &all_pods {
+        if pod.metadata.namespace != name {
+            continue;
+        }
+        match pod.status.phase.as_str() {
+            "Running" => running += 1,
+            "Pending" => pending += 1,
+            "Failed" => failed += 1,
+            _ => {}
+        }
+        pod_views.push(build_pod_view(pod));
+    }
+
+    let pod_count = pod_views.len();
+
+    let tmpl = NamespaceDetailTemplate {
+        title: format!("Namespace: {}", name),
+        current_nav: "namespaces".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb {
+                label: "Dashboard".to_string(),
+                url: "/ui/".to_string(),
+            },
+            Breadcrumb {
+                label: "Namespaces".to_string(),
+                url: "/ui/namespaces".to_string(),
+            },
+            Breadcrumb {
+                label: name.clone(),
+                url: String::new(),
+            },
+        ],
+        namespace_name: name,
+        pod_count,
+        running,
+        pending,
+        failed,
+        pods: pod_views,
+    };
+
+    render_template(&tmpl)
+}
+
+// --- Container Detail ---
+
+#[derive(Template)]
+#[template(path = "container_detail.html")]
+struct ContainerDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    container: ContainerDetailView,
+}
+
+pub async fn handle_container_detail(
+    State(state): State<AppState>,
+    Path((namespace, pod_name, container_name)): Path<(String, String, String)>,
+) -> Response {
+    let (pod, _node_name) = match state.aggregator.get_pod(&namespace, &pod_name).await {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::NOT_FOUND, "Pod not found").into_response(),
+    };
+
+    // Find the container spec
+    let container_spec = pod.spec.containers.iter().find(|c| c.name == container_name);
+
+    // Find the container status
+    let container_status = pod.status.container_statuses.iter().find(|cs| cs.name == container_name);
+
+    if container_spec.is_none() && container_status.is_none() {
+        return (StatusCode::NOT_FOUND, "Container not found").into_response();
+    }
+
+    let (state_str, state_class) = if let Some(cs) = container_status {
+        if cs.state.running.is_some() {
+            ("Running".to_string(), "badge-success".to_string())
+        } else if let Some(ref w) = cs.state.waiting {
+            (format!("Waiting: {}", w.reason), "badge-warning".to_string())
+        } else if let Some(ref t) = cs.state.terminated {
+            (format!("Terminated: {}", t.reason), "badge-error".to_string())
+        } else {
+            ("Unknown".to_string(), "badge-warning".to_string())
+        }
+    } else {
+        ("Unknown".to_string(), "badge-warning".to_string())
+    };
+
+    let ready = container_status.map(|cs| cs.ready).unwrap_or(false);
+    let image = container_status
+        .map(|cs| cs.image.clone())
+        .or_else(|| container_spec.map(|c| c.image.clone()))
+        .unwrap_or_default();
+
+    let volume_mounts = container_spec
+        .map(|c| {
+            c.volume_mounts
+                .iter()
+                .map(|vm| VolumeView {
+                    name: vm.name.clone(),
+                    mount_path: vm.mount_path.clone(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let detail = ContainerDetailView {
+        name: container_name.clone(),
+        pod_name: pod_name.clone(),
+        namespace: namespace.clone(),
+        image,
+        state: state_str,
+        state_class,
+        ready,
+        volume_mounts,
+    };
+
+    let tmpl = ContainerDetailTemplate {
+        title: format!("Container: {}", container_name),
+        current_nav: "namespaces".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb {
+                label: "Dashboard".to_string(),
+                url: "/ui/".to_string(),
+            },
+            Breadcrumb {
+                label: "Namespaces".to_string(),
+                url: "/ui/namespaces".to_string(),
+            },
+            Breadcrumb {
+                label: namespace.clone(),
+                url: format!("/ui/namespaces/{}", namespace),
+            },
+            Breadcrumb {
+                label: pod_name.clone(),
+                url: format!("/ui/namespaces/{}/pods/{}", namespace, pod_name),
+            },
+            Breadcrumb {
+                label: container_name,
+                url: String::new(),
+            },
+        ],
+        container: detail,
+    };
+
+    render_template(&tmpl)
+}
+
 // --- View Builders ---
 
 fn build_pod_view(pod: &k8s::Pod) -> PodView {
@@ -374,15 +548,19 @@ pub async fn handle_pod_detail(
 
     let tmpl = PodDetailTemplate {
         title: format!("Pod: {}", name),
-        current_nav: "pods".to_string(),
+        current_nav: "namespaces".to_string(),
         breadcrumbs: vec![
             Breadcrumb {
                 label: "Dashboard".to_string(),
                 url: "/ui/".to_string(),
             },
             Breadcrumb {
-                label: "Pods".to_string(),
-                url: "/ui/pods".to_string(),
+                label: "Namespaces".to_string(),
+                url: "/ui/namespaces".to_string(),
+            },
+            Breadcrumb {
+                label: namespace.clone(),
+                url: format!("/ui/namespaces/{}", namespace),
             },
             Breadcrumb {
                 label: name.clone(),
@@ -579,39 +757,3 @@ async fn fetch_tags(registry_url: &str, repo: &str) -> Vec<String> {
     }
 }
 
-// --- Logs ---
-
-#[derive(Template)]
-#[template(path = "logs.html")]
-#[allow(dead_code)]
-struct LogsTemplate {
-    title: String,
-    current_nav: String,
-    breadcrumbs: Vec<Breadcrumb>,
-    pods: Vec<PodView>,
-    logs_url: String,
-}
-
-pub async fn handle_logs(State(state): State<AppState>) -> Response {
-    let all_pods = state.aggregator.list_all_pods().await.unwrap_or_default();
-    let pod_views: Vec<PodView> = all_pods.iter().map(build_pod_view).collect();
-
-    let tmpl = LogsTemplate {
-        title: "Logs".to_string(),
-        current_nav: "logs".to_string(),
-        breadcrumbs: vec![
-            Breadcrumb {
-                label: "Dashboard".to_string(),
-                url: "/ui/".to_string(),
-            },
-            Breadcrumb {
-                label: "Logs".to_string(),
-                url: "/ui/logs".to_string(),
-            },
-        ],
-        pods: pod_views,
-        logs_url: state.config.logs_url(),
-    };
-
-    render_template(&tmpl)
-}

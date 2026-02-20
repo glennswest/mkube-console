@@ -22,7 +22,7 @@
       {% else %}
       {% for ns in namespaces %}
       <tr>
-        <td><a href="/ui/pods?namespace={{ ns.name }}">{{ ns.name }}</a></td>
+        <td><a href="/ui/namespaces/{{ ns.name }}">{{ ns.name }}</a></td>
         <td>{{ ns.pod_count }}</td>
         <td>{{ ns.running }}</td>
         <td>{{ ns.pending }}</td>
