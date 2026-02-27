@@ -5,7 +5,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 use serde::Deserialize;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::helpers::{human_bytes, human_time, parse_age};
 use crate::models::k8s;
@@ -755,5 +755,687 @@ async fn fetch_tags(registry_url: &str, repo: &str) -> Vec<String> {
         Ok(t) => t.tags.unwrap_or_default(),
         Err(_) => Vec::new(),
     }
+}
+
+// --- Deployments ---
+
+#[derive(Template)]
+#[template(path = "deployments.html")]
+struct DeploymentsTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    deployments: Vec<DeploymentView>,
+}
+
+pub async fn handle_deployments(State(state): State<AppState>) -> Response {
+    let items = state.aggregator.list_deployments().await.unwrap_or_default();
+    let deployments: Vec<DeploymentView> = items.iter().map(build_deployment_view).collect();
+
+    let tmpl = DeploymentsTemplate {
+        title: "Deployments".to_string(),
+        current_nav: "deployments".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Deployments".to_string(), url: "/ui/deployments".to_string() },
+        ],
+        deployments,
+    };
+    render_template(&tmpl)
+}
+
+#[derive(Template)]
+#[template(path = "deployment_detail.html")]
+struct DeploymentDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    deploy: DeploymentView,
+    pods: Vec<PodView>,
+}
+
+pub async fn handle_deployment_detail(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> Response {
+    let dep = match state.aggregator.get_deployment(&namespace, &name).await {
+        Ok(d) => d,
+        Err(_) => return (StatusCode::NOT_FOUND, "Deployment not found").into_response(),
+    };
+
+    let dv = build_deployment_view(&dep);
+
+    // Find pods owned by this deployment
+    let all_pods = state.aggregator.list_all_pods().await.unwrap_or_default();
+    let pods: Vec<PodView> = all_pods
+        .iter()
+        .filter(|p| {
+            p.metadata.namespace == namespace
+                && p.metadata
+                    .annotations
+                    .as_ref()
+                    .and_then(|a| a.get("vkube.io/owner-deployment"))
+                    .map(|v| v == &name)
+                    .unwrap_or(false)
+        })
+        .map(build_pod_view)
+        .collect();
+
+    let tmpl = DeploymentDetailTemplate {
+        title: format!("Deployment: {}", name),
+        current_nav: "deployments".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Deployments".to_string(), url: "/ui/deployments".to_string() },
+            Breadcrumb { label: name.clone(), url: String::new() },
+        ],
+        deploy: dv,
+        pods,
+    };
+    render_template(&tmpl)
+}
+
+fn build_deployment_view(d: &k8s::Deployment) -> DeploymentView {
+    let status = if d.status.ready_replicas >= d.spec.replicas && d.spec.replicas > 0 {
+        "Ready".to_string()
+    } else if d.status.ready_replicas > 0 {
+        "Degraded".to_string()
+    } else {
+        "Pending".to_string()
+    };
+    let status_class = match status.as_str() {
+        "Ready" => "badge-success",
+        "Degraded" => "badge-warning",
+        _ => "badge-info",
+    }
+    .to_string();
+
+    DeploymentView {
+        name: d.metadata.name.clone(),
+        namespace: d.metadata.namespace.clone(),
+        replicas: d.spec.replicas,
+        ready_replicas: d.status.ready_replicas,
+        status,
+        status_class,
+        age: parse_age(&d.metadata.creation_timestamp),
+    }
+}
+
+// --- Networks ---
+
+#[derive(Template)]
+#[template(path = "networks.html")]
+struct NetworksTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    networks: Vec<NetworkView>,
+}
+
+pub async fn handle_networks(State(state): State<AppState>) -> Response {
+    let items = state.aggregator.list_networks().await.unwrap_or_default();
+    let networks: Vec<NetworkView> = items.iter().map(build_network_view).collect();
+
+    let tmpl = NetworksTemplate {
+        title: "Networks".to_string(),
+        current_nav: "networks".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Networks".to_string(), url: "/ui/networks".to_string() },
+        ],
+        networks,
+    };
+    render_template(&tmpl)
+}
+
+#[derive(Template)]
+#[template(path = "network_detail.html")]
+struct NetworkDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    net: NetworkView,
+    reservations: Vec<DHCPReservationView>,
+    static_records: Vec<StaticRecordView>,
+}
+
+pub async fn handle_network_detail(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Response {
+    let net = match state.aggregator.get_network(&name).await {
+        Ok(n) => n,
+        Err(_) => return (StatusCode::NOT_FOUND, "Network not found").into_response(),
+    };
+
+    let nv = build_network_view(&net);
+
+    let reservations: Vec<DHCPReservationView> = net
+        .spec
+        .dhcp
+        .reservations
+        .iter()
+        .map(|r| DHCPReservationView {
+            mac: r.mac.clone(),
+            ip: r.ip.clone(),
+            hostname: r.hostname.clone(),
+        })
+        .collect();
+
+    let static_records: Vec<StaticRecordView> = net
+        .spec
+        .static_records
+        .iter()
+        .map(|r| StaticRecordView {
+            name: r.name.clone(),
+            ip: r.ip.clone(),
+        })
+        .collect();
+
+    let tmpl = NetworkDetailTemplate {
+        title: format!("Network: {}", name),
+        current_nav: "networks".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Networks".to_string(), url: "/ui/networks".to_string() },
+            Breadcrumb { label: name.clone(), url: String::new() },
+        ],
+        net: nv,
+        reservations,
+        static_records,
+    };
+    render_template(&tmpl)
+}
+
+fn build_network_view(n: &k8s::Network) -> NetworkView {
+    let status = if n.status.dns_alive {
+        "Active".to_string()
+    } else if n.spec.external_dns {
+        "External".to_string()
+    } else {
+        "Unknown".to_string()
+    };
+    let status_class = match status.as_str() {
+        "Active" => "badge-success",
+        "External" => "badge-info",
+        _ => "badge-warning",
+    }
+    .to_string();
+
+    NetworkView {
+        name: n.metadata.name.clone(),
+        type_field: n.spec.type_field.clone(),
+        cidr: n.spec.cidr.clone(),
+        gateway: n.spec.gateway.clone(),
+        dns_zone: n.spec.dns.zone.clone(),
+        dns_server: n.spec.dns.server.clone(),
+        dhcp_enabled: n.spec.dhcp.enabled,
+        managed: n.spec.managed,
+        dns_alive: n.status.dns_alive,
+        pod_count: n.status.pod_count,
+        status,
+        status_class,
+        age: parse_age(&n.metadata.creation_timestamp),
+    }
+}
+
+// --- PVCs ---
+
+#[derive(Template)]
+#[template(path = "pvcs.html")]
+struct PVCsTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    pvcs: Vec<PVCView>,
+}
+
+pub async fn handle_pvcs(State(state): State<AppState>) -> Response {
+    let items = state.aggregator.list_pvcs().await.unwrap_or_default();
+    let pvcs: Vec<PVCView> = items.iter().map(build_pvc_view).collect();
+
+    let tmpl = PVCsTemplate {
+        title: "PVCs".to_string(),
+        current_nav: "pvcs".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "PVCs".to_string(), url: "/ui/pvcs".to_string() },
+        ],
+        pvcs,
+    };
+    render_template(&tmpl)
+}
+
+fn build_pvc_view(p: &k8s::PersistentVolumeClaim) -> PVCView {
+    let status_class = match p.status.phase.as_str() {
+        "Bound" => "badge-success",
+        "Pending" => "badge-warning",
+        "Lost" => "badge-error",
+        _ => "badge-info",
+    }
+    .to_string();
+
+    let capacity = p
+        .status
+        .capacity
+        .get("storage")
+        .cloned()
+        .unwrap_or_default();
+
+    PVCView {
+        name: p.metadata.name.clone(),
+        namespace: p.metadata.namespace.clone(),
+        status: p.status.phase.clone(),
+        status_class,
+        capacity,
+        access_modes: p.spec.access_modes.join(", "),
+        age: parse_age(&p.metadata.creation_timestamp),
+    }
+}
+
+// --- BareMetalHosts ---
+
+#[derive(Template)]
+#[template(path = "bmhs.html")]
+struct BMHsTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    bmhs: Vec<BMHView>,
+}
+
+pub async fn handle_bmhs(State(state): State<AppState>) -> Response {
+    let items = state.aggregator.list_bmhs().await.unwrap_or_default();
+    let bmhs: Vec<BMHView> = items.iter().map(build_bmh_view).collect();
+
+    let tmpl = BMHsTemplate {
+        title: "Bare Metal Hosts".to_string(),
+        current_nav: "bmh".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Bare Metal Hosts".to_string(), url: "/ui/bmh".to_string() },
+        ],
+        bmhs,
+    };
+    render_template(&tmpl)
+}
+
+#[derive(Template)]
+#[template(path = "bmh_detail.html")]
+struct BMHDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    bmh: BMHView,
+}
+
+pub async fn handle_bmh_detail(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> Response {
+    let bmh = match state.aggregator.get_bmh(&namespace, &name).await {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::NOT_FOUND, "BMH not found").into_response(),
+    };
+
+    let bv = build_bmh_view(&bmh);
+
+    let tmpl = BMHDetailTemplate {
+        title: format!("BMH: {}", name),
+        current_nav: "bmh".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Bare Metal Hosts".to_string(), url: "/ui/bmh".to_string() },
+            Breadcrumb { label: name.clone(), url: String::new() },
+        ],
+        bmh: bv,
+    };
+    render_template(&tmpl)
+}
+
+fn build_bmh_view(b: &k8s::BareMetalHost) -> BMHView {
+    let status_class = match b.status.phase.as_str() {
+        "Ready" => "badge-success",
+        "Provisioning" | "Registering" => "badge-warning",
+        "Error" => "badge-error",
+        _ => "badge-info",
+    }
+    .to_string();
+
+    BMHView {
+        name: b.metadata.name.clone(),
+        namespace: b.metadata.namespace.clone(),
+        phase: b.status.phase.clone(),
+        status_class,
+        powered_on: b.status.powered_on,
+        network: b.spec.network.clone(),
+        image: b.spec.image.clone(),
+        ip: b.spec.ip.clone(),
+        mac: b.spec.boot_mac_address.clone(),
+        bmc_address: b.spec.bmc.address.clone(),
+        bmc_network: b.spec.bmc.network.clone(),
+        bmc_username: b.spec.bmc.username.clone(),
+        age: parse_age(&b.metadata.creation_timestamp),
+    }
+}
+
+// --- iSCSI CDROMs ---
+
+#[derive(Template)]
+#[template(path = "iscsi_cdroms.html")]
+struct ISCSICdromsTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    cdroms: Vec<ISCSICdromView>,
+}
+
+pub async fn handle_iscsi_cdroms(State(state): State<AppState>) -> Response {
+    let items = state.aggregator.list_iscsi_cdroms().await.unwrap_or_default();
+    let cdroms: Vec<ISCSICdromView> = items.iter().map(build_iscsi_cdrom_view).collect();
+
+    let tmpl = ISCSICdromsTemplate {
+        title: "iSCSI CDROMs".to_string(),
+        current_nav: "iscsi-cdroms".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "iSCSI CDROMs".to_string(), url: "/ui/iscsi-cdroms".to_string() },
+        ],
+        cdroms,
+    };
+    render_template(&tmpl)
+}
+
+#[derive(Template)]
+#[template(path = "iscsi_cdrom_detail.html")]
+struct ISCSICdromDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    cdrom: ISCSICdromView,
+    subscribers: Vec<SubscriberView>,
+}
+
+pub async fn handle_iscsi_cdrom_detail(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Response {
+    let cdrom = match state.aggregator.get_iscsi_cdrom(&name).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::NOT_FOUND, "iSCSI CDROM not found").into_response(),
+    };
+
+    let cv = build_iscsi_cdrom_view(&cdrom);
+
+    let subscribers: Vec<SubscriberView> = cdrom
+        .status
+        .subscribers
+        .iter()
+        .map(|s| SubscriberView {
+            name: s.name.clone(),
+            initiator_iqn: s.initiator_iqn.clone(),
+            since: parse_age(&Some(s.since.clone())),
+        })
+        .collect();
+
+    let tmpl = ISCSICdromDetailTemplate {
+        title: format!("iSCSI CDROM: {}", name),
+        current_nav: "iscsi-cdroms".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "iSCSI CDROMs".to_string(), url: "/ui/iscsi-cdroms".to_string() },
+            Breadcrumb { label: name.clone(), url: String::new() },
+        ],
+        cdrom: cv,
+        subscribers,
+    };
+    render_template(&tmpl)
+}
+
+fn build_iscsi_cdrom_view(c: &k8s::ISCSICdrom) -> ISCSICdromView {
+    let status_class = match c.status.phase.as_str() {
+        "Ready" => "badge-success",
+        "Uploading" | "Pending" => "badge-warning",
+        "Error" => "badge-error",
+        _ => "badge-info",
+    }
+    .to_string();
+
+    let iso_size_display = if c.status.iso_size == 0 {
+        "-".to_string()
+    } else {
+        human_bytes(c.status.iso_size)
+    };
+
+    let portal = if c.status.portal_ip.is_empty() {
+        String::new()
+    } else {
+        format!("{}:{}", c.status.portal_ip, c.status.portal_port)
+    };
+
+    ISCSICdromView {
+        name: c.metadata.name.clone(),
+        phase: c.status.phase.clone(),
+        status_class,
+        iso_file: c.spec.iso_file.clone(),
+        iso_size_display,
+        description: c.spec.description.clone(),
+        target_iqn: c.status.target_iqn.clone(),
+        portal,
+        subscriber_count: c.status.subscribers.len(),
+        age: parse_age(&c.metadata.creation_timestamp),
+    }
+}
+
+// --- ConfigMaps ---
+
+#[derive(Template)]
+#[template(path = "configmaps.html")]
+struct ConfigMapsTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    configmaps: Vec<ConfigMapView>,
+}
+
+pub async fn handle_configmaps(State(state): State<AppState>) -> Response {
+    // Collect configmaps from all namespaces we know about
+    let all_pods = state.aggregator.list_all_pods().await.unwrap_or_default();
+    let mut namespaces = BTreeSet::new();
+    for pod in &all_pods {
+        namespaces.insert(pod.metadata.namespace.clone());
+    }
+
+    let mut configmaps = Vec::new();
+    for ns in &namespaces {
+        if let Ok(cms) = state.aggregator.list_configmaps(ns).await {
+            for cm in &cms {
+                configmaps.push(ConfigMapView {
+                    name: cm.metadata.name.clone(),
+                    namespace: cm.metadata.namespace.clone(),
+                    key_count: cm.data.len(),
+                    age: parse_age(&cm.metadata.creation_timestamp),
+                });
+            }
+        }
+    }
+
+    let tmpl = ConfigMapsTemplate {
+        title: "ConfigMaps".to_string(),
+        current_nav: "configmaps".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "ConfigMaps".to_string(), url: "/ui/configmaps".to_string() },
+        ],
+        configmaps,
+    };
+    render_template(&tmpl)
+}
+
+#[derive(Template)]
+#[template(path = "configmap_detail.html")]
+struct ConfigMapDetailTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    cm_name: String,
+    cm_namespace: String,
+    keys: Vec<String>,
+    data: HashMap<String, String>,
+}
+
+pub async fn handle_configmap_detail(
+    State(state): State<AppState>,
+    Path((namespace, name)): Path<(String, String)>,
+) -> Response {
+    let cm = match state.aggregator.get_configmap(&namespace, &name).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::NOT_FOUND, "ConfigMap not found").into_response(),
+    };
+
+    let mut keys: Vec<String> = cm.data.keys().cloned().collect();
+    keys.sort();
+
+    let tmpl = ConfigMapDetailTemplate {
+        title: format!("ConfigMap: {}", name),
+        current_nav: "configmaps".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "ConfigMaps".to_string(), url: "/ui/configmaps".to_string() },
+            Breadcrumb { label: name.clone(), url: String::new() },
+        ],
+        cm_name: name,
+        cm_namespace: namespace,
+        keys,
+        data: cm.data,
+    };
+    render_template(&tmpl)
+}
+
+// --- Consistency ---
+
+#[derive(Template)]
+#[template(path = "consistency.html")]
+struct ConsistencyTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    pass_count: usize,
+    fail_count: usize,
+    warn_count: usize,
+    timestamp: String,
+    categories: Vec<(String, Vec<CheckItemView>)>,
+}
+
+pub async fn handle_consistency(State(state): State<AppState>) -> Response {
+    let report = state.aggregator.get_consistency().await.unwrap_or_default();
+
+    let mut categories: Vec<(String, Vec<CheckItemView>)> = Vec::new();
+
+    // Sort categories by name for stable ordering
+    let mut sorted_checks: BTreeMap<String, Vec<k8s::CheckItem>> = BTreeMap::new();
+    for (k, v) in &report.checks {
+        sorted_checks.insert(k.clone(), v.clone());
+    }
+
+    for (cat_name, checks) in &sorted_checks {
+        let items: Vec<CheckItemView> = checks
+            .iter()
+            .map(|c| {
+                let status_class = match c.status.as_str() {
+                    "pass" => "badge-success",
+                    "fail" => "badge-error",
+                    "warn" => "badge-warning",
+                    _ => "badge-info",
+                }
+                .to_string();
+                CheckItemView {
+                    name: c.name.clone(),
+                    status: c.status.clone(),
+                    status_class,
+                    message: c.message.clone(),
+                    details: c.details.clone(),
+                }
+            })
+            .collect();
+        categories.push((cat_name.clone(), items));
+    }
+
+    let tmpl = ConsistencyTemplate {
+        title: "Consistency".to_string(),
+        current_nav: "consistency".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Consistency".to_string(), url: "/ui/consistency".to_string() },
+        ],
+        pass_count: report.summary.pass,
+        fail_count: report.summary.fail,
+        warn_count: report.summary.warn,
+        timestamp: parse_age(&Some(report.timestamp)),
+        categories,
+    };
+    render_template(&tmpl)
+}
+
+// --- Events ---
+
+#[derive(Template)]
+#[template(path = "events.html")]
+struct EventsTemplate {
+    title: String,
+    current_nav: String,
+    breadcrumbs: Vec<Breadcrumb>,
+    events: Vec<EventView>,
+}
+
+pub async fn handle_events(State(state): State<AppState>) -> Response {
+    let items = state.aggregator.list_events().await.unwrap_or_default();
+
+    let mut events: Vec<EventView> = items
+        .iter()
+        .map(|e| {
+            let type_class = match e.type_field.as_str() {
+                "Normal" => "badge-success",
+                "Warning" => "badge-warning",
+                _ => "badge-info",
+            }
+            .to_string();
+
+            let involved = if e.involved_object.namespace.is_empty() {
+                format!("{}/{}", e.involved_object.kind, e.involved_object.name)
+            } else {
+                format!(
+                    "{}/{}/{}",
+                    e.involved_object.kind, e.involved_object.namespace, e.involved_object.name
+                )
+            };
+
+            EventView {
+                namespace: e.metadata.namespace.clone(),
+                name: e.metadata.name.clone(),
+                reason: e.reason.clone(),
+                message: e.message.clone(),
+                type_field: e.type_field.clone(),
+                type_class,
+                involved_object: involved,
+                count: e.count,
+                age: parse_age(&e.last_timestamp),
+            }
+        })
+        .collect();
+
+    // Show most recent first
+    events.reverse();
+
+    let tmpl = EventsTemplate {
+        title: "Events".to_string(),
+        current_nav: "events".to_string(),
+        breadcrumbs: vec![
+            Breadcrumb { label: "Dashboard".to_string(), url: "/ui/".to_string() },
+            Breadcrumb { label: "Events".to_string(), url: "/ui/events".to_string() },
+        ],
+        events,
+    };
+    render_template(&tmpl)
 }
 

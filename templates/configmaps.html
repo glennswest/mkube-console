@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">ConfigMaps</h1>
+<p class="page-subtitle">Configuration data for workloads</p>
+
+<div class="table-wrapper" hx-get="/ui/configmaps" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Namespace</th>
+        <th>Keys</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if configmaps.is_empty() %}
+      <tr><td colspan="4" class="empty-state"><h3>No configmaps found</h3></td></tr>
+      {% else %}
+      {% for cm in configmaps %}
+      <tr>
+        <td><a href="/ui/configmaps/{{ cm.namespace }}/{{ cm.name }}">{{ cm.name }}</a></td>
+        <td>{{ cm.namespace }}</td>
+        <td>{{ cm.key_count }}</td>
+        <td>{{ cm.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Events</h1>
+<p class="page-subtitle">Cluster events</p>
+
+<div class="table-wrapper" hx-get="/ui/events" hx-trigger="every 5s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Reason</th>
+        <th>Object</th>
+        <th>Message</th>
+        <th>Count</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if events.is_empty() %}
+      <tr><td colspan="6" class="empty-state"><h3>No events found</h3></td></tr>
+      {% else %}
+      {% for e in events %}
+      <tr>
+        <td><span class="release-badge {{ e.type_class }}">{{ e.type_field }}</span></td>
+        <td>{{ e.reason }}</td>
+        <td style="font-size:13px">{{ e.involved_object }}</td>
+        <td>{{ e.message }}</td>
+        <td>{{ e.count }}</td>
+        <td>{{ e.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

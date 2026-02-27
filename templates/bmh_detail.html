@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">{{ bmh.name }}</h1>
+<p class="page-subtitle">{{ bmh.namespace }} namespace</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Phase</div>
+    <div class="stat-value"><span class="release-badge {{ bmh.status_class }}">{{ bmh.phase }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Power</div>
+    <div class="stat-value">{% if bmh.powered_on %}<span class="release-badge badge-success">On</span>{% else %}<span class="release-badge badge-error">Off</span>{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Network</div>
+    <div class="stat-value" style="font-size:16px">{{ bmh.network }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Age</div>
+    <div class="stat-value" style="font-size:16px">{{ bmh.age }}</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Server Details</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <tbody>
+        <tr><td style="width:200px"><strong>Boot MAC</strong></td><td class="mono">{{ bmh.mac }}</td></tr>
+        <tr><td><strong>IP Address</strong></td><td class="mono">{{ bmh.ip }}</td></tr>
+        <tr><td><strong>Network</strong></td><td>{{ bmh.network }}</td></tr>
+        <tr><td><strong>Image</strong></td><td>{{ bmh.image }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">BMC / IPMI</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <tbody>
+        <tr><td style="width:200px"><strong>BMC Address</strong></td><td class="mono">{{ bmh.bmc_address }}</td></tr>
+        <tr><td><strong>BMC Network</strong></td><td>{{ bmh.bmc_network }}</td></tr>
+        <tr><td><strong>BMC Username</strong></td><td>{{ bmh.bmc_username }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

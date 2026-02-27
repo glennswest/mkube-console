@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Bare Metal Hosts</h1>
+<p class="page-subtitle">Physical server inventory</p>
+
+<div class="table-wrapper" hx-get="/ui/bmh" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Namespace</th>
+        <th>Phase</th>
+        <th>Power</th>
+        <th>Network</th>
+        <th>IP</th>
+        <th>MAC</th>
+        <th>Image</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if bmhs.is_empty() %}
+      <tr><td colspan="9" class="empty-state"><h3>No bare metal hosts found</h3></td></tr>
+      {% else %}
+      {% for b in bmhs %}
+      <tr>
+        <td><a href="/ui/bmh/{{ b.namespace }}/{{ b.name }}">{{ b.name }}</a></td>
+        <td>{{ b.namespace }}</td>
+        <td><span class="release-badge {{ b.status_class }}">{{ b.phase }}</span></td>
+        <td>{% if b.powered_on %}<span class="release-badge badge-success">On</span>{% else %}<span class="release-badge badge-error">Off</span>{% endif %}</td>
+        <td>{{ b.network }}</td>
+        <td class="mono">{{ b.ip }}</td>
+        <td class="mono" style="font-size:12px">{{ b.mac }}</td>
+        <td>{{ b.image }}</td>
+        <td>{{ b.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

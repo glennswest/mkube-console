@@ -4,7 +4,10 @@ use tokio::sync::RwLock;
 use tokio::time::{self, Duration};
 use tracing::{info, warn};
 
-use crate::models::k8s::{Node, Pod};
+use crate::models::k8s::{
+    BareMetalHost, ConfigMap, ConsistencyReport, Deployment, Event, ISCSICdrom, Network, Node,
+    PersistentVolumeClaim, Pod,
+};
 use crate::models::views::{ClusterSummary, NodeSummary};
 
 use super::NodeClient;
@@ -176,6 +179,154 @@ impl Aggregator {
             .get(name)
             .ok_or_else(|| format!("node {:?} not found", name))?;
         c.get_node().await
+    }
+
+    // --- Delegating methods (single-node, use first healthy client) ---
+
+    async fn first_client(&self) -> Option<std::sync::Arc<NodeClient>> {
+        let clients = self.snapshot().await;
+        clients.into_iter().find(|c| c.is_healthy()).or_else(|| None)
+    }
+
+    pub async fn list_deployments(
+        &self,
+    ) -> Result<Vec<Deployment>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_deployments().await?.items),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn get_deployment(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<Deployment, Box<dyn std::error::Error + Send + Sync>> {
+        let clients = self.snapshot().await;
+        for c in &clients {
+            if let Ok(d) = c.get_deployment(ns, name).await {
+                return Ok(d);
+            }
+        }
+        Err(format!("deployment {}/{} not found", ns, name).into())
+    }
+
+    pub async fn list_networks(
+        &self,
+    ) -> Result<Vec<Network>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_networks().await?.items),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn get_network(
+        &self,
+        name: &str,
+    ) -> Result<Network, Box<dyn std::error::Error + Send + Sync>> {
+        let clients = self.snapshot().await;
+        for c in &clients {
+            if let Ok(n) = c.get_network(name).await {
+                return Ok(n);
+            }
+        }
+        Err(format!("network {} not found", name).into())
+    }
+
+    pub async fn list_pvcs(
+        &self,
+    ) -> Result<Vec<PersistentVolumeClaim>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_pvcs().await?.items),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn list_bmhs(
+        &self,
+    ) -> Result<Vec<BareMetalHost>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_bmhs().await?.items),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn get_bmh(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<BareMetalHost, Box<dyn std::error::Error + Send + Sync>> {
+        let clients = self.snapshot().await;
+        for c in &clients {
+            if let Ok(b) = c.get_bmh(ns, name).await {
+                return Ok(b);
+            }
+        }
+        Err(format!("bmh {}/{} not found", ns, name).into())
+    }
+
+    pub async fn list_iscsi_cdroms(
+        &self,
+    ) -> Result<Vec<ISCSICdrom>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_iscsi_cdroms().await?.items),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn get_iscsi_cdrom(
+        &self,
+        name: &str,
+    ) -> Result<ISCSICdrom, Box<dyn std::error::Error + Send + Sync>> {
+        let clients = self.snapshot().await;
+        for c in &clients {
+            if let Ok(i) = c.get_iscsi_cdrom(name).await {
+                return Ok(i);
+            }
+        }
+        Err(format!("iscsi-cdrom {} not found", name).into())
+    }
+
+    pub async fn list_configmaps(
+        &self,
+        ns: &str,
+    ) -> Result<Vec<ConfigMap>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_configmaps(ns).await?.items),
+            None => Ok(Vec::new()),
+        }
+    }
+
+    pub async fn get_configmap(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<ConfigMap, Box<dyn std::error::Error + Send + Sync>> {
+        let clients = self.snapshot().await;
+        for c in &clients {
+            if let Ok(cm) = c.get_configmap(ns, name).await {
+                return Ok(cm);
+            }
+        }
+        Err(format!("configmap {}/{} not found", ns, name).into())
+    }
+
+    pub async fn get_consistency(
+        &self,
+    ) -> Result<ConsistencyReport, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => c.get_consistency().await,
+            None => Err("no healthy nodes".into()),
+        }
+    }
+
+    pub async fn list_events(
+        &self,
+    ) -> Result<Vec<Event>, Box<dyn std::error::Error + Send + Sync>> {
+        match self.first_client().await {
+            Some(c) => Ok(c.list_events().await?.items),
+            None => Ok(Vec::new()),
+        }
     }
 
     pub async fn get_cluster_summary(&self) -> ClusterSummary {

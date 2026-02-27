@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">{{ net.name }}</h1>
+<p class="page-subtitle">Network details</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Status</div>
+    <div class="stat-value"><span class="release-badge {{ net.status_class }}">{{ net.status }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Type</div>
+    <div class="stat-value" style="font-size:16px">{{ net.type_field }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pods</div>
+    <div class="stat-value blue">{{ net.pod_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Age</div>
+    <div class="stat-value" style="font-size:16px">{{ net.age }}</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Configuration</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <tbody>
+        <tr><td style="width:200px"><strong>CIDR</strong></td><td class="mono">{{ net.cidr }}</td></tr>
+        <tr><td><strong>Gateway</strong></td><td class="mono">{{ net.gateway }}</td></tr>
+        <tr><td><strong>DNS Zone</strong></td><td>{{ net.dns_zone }}</td></tr>
+        <tr><td><strong>DNS Server</strong></td><td class="mono">{{ net.dns_server }}</td></tr>
+        <tr><td><strong>DHCP Enabled</strong></td><td>{% if net.dhcp_enabled %}Yes{% else %}No{% endif %}</td></tr>
+        <tr><td><strong>Managed</strong></td><td>{% if net.managed %}Yes{% else %}No{% endif %}</td></tr>
+        <tr><td><strong>DNS Alive</strong></td><td>{% if net.dns_alive %}<span class="release-badge badge-success">Yes</span>{% else %}<span class="release-badge badge-warning">No</span>{% endif %}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if !reservations.is_empty() %}
+<div class="section">
+  <div class="section-title">DHCP Reservations <span class="count">{{ reservations.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>MAC Address</th>
+          <th>IP Address</th>
+          <th>Hostname</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reservations %}
+        <tr>
+          <td class="mono">{{ r.mac }}</td>
+          <td class="mono">{{ r.ip }}</td>
+          <td>{{ r.hostname }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if !static_records.is_empty() %}
+<div class="section">
+  <div class="section-title">Static Records <span class="count">{{ static_records.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in static_records %}
+        <tr>
+          <td>{{ r.name }}</td>
+          <td class="mono">{{ r.ip }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

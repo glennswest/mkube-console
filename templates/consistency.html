@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Consistency Check</h1>
+<p class="page-subtitle">Last run {{ timestamp }} ago</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Pass</div>
+    <div class="stat-value green">{{ pass_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Fail</div>
+    <div class="stat-value" style="color:var(--accent-red)">{{ fail_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Warn</div>
+    <div class="stat-value" style="color:var(--accent-yellow)">{{ warn_count }}</div>
+  </div>
+</div>
+
+{% if categories.is_empty() %}
+<div class="empty-state">
+  <h3>No consistency data</h3>
+  <p>Unable to fetch consistency report from the cluster.</p>
+</div>
+{% else %}
+{% for pair in categories %}
+<div class="section">
+  <div class="section-title">{{ pair.0 }} <span class="count">{{ pair.1.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Check</th>
+          <th>Status</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in pair.1 %}
+        <tr>
+          <td>{{ c.name }}</td>
+          <td><span class="release-badge {{ c.status_class }}">{{ c.status }}</span></td>
+          <td>{{ c.message }}{% if !c.details.is_empty() %} <span style="color:var(--text-tertiary);font-size:12px">({{ c.details }})</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Deployments</h1>
+<p class="page-subtitle">Managed application deployments</p>
+
+<div class="table-wrapper" hx-get="/ui/deployments" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Namespace</th>
+        <th>Replicas</th>
+        <th>Status</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if deployments.is_empty() %}
+      <tr><td colspan="5" class="empty-state"><h3>No deployments found</h3></td></tr>
+      {% else %}
+      {% for d in deployments %}
+      <tr>
+        <td><a href="/ui/deployments/{{ d.namespace }}/{{ d.name }}">{{ d.name }}</a></td>
+        <td>{{ d.namespace }}</td>
+        <td>{{ d.ready_replicas }}/{{ d.replicas }}</td>
+        <td><span class="release-badge {{ d.status_class }}">{{ d.status }}</span></td>
+        <td>{{ d.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

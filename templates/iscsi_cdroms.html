@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">iSCSI CDROMs</h1>
+<p class="page-subtitle">ISO images served via iSCSI</p>
+
+<div class="table-wrapper" hx-get="/ui/iscsi-cdroms" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Phase</th>
+        <th>ISO Size</th>
+        <th>Target IQN</th>
+        <th>Subscribers</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if cdroms.is_empty() %}
+      <tr><td colspan="6" class="empty-state"><h3>No iSCSI CDROMs found</h3></td></tr>
+      {% else %}
+      {% for c in cdroms %}
+      <tr>
+        <td><a href="/ui/iscsi-cdroms/{{ c.name }}">{{ c.name }}</a></td>
+        <td><span class="release-badge {{ c.status_class }}">{{ c.phase }}</span></td>
+        <td>{{ c.iso_size_display }}</td>
+        <td class="mono" style="font-size:12px">{{ c.target_iqn }}</td>
+        <td>{{ c.subscriber_count }}</td>
+        <td>{{ c.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

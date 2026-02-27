@@ -80,3 +80,123 @@ pub struct NodeView {
     pub board: String,
     pub cpu_load: String,
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct DeploymentView {
+    pub name: String,
+    pub namespace: String,
+    pub replicas: i32,
+    pub ready_replicas: i32,
+    pub status: String,
+    pub status_class: String,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct PVCView {
+    pub name: String,
+    pub namespace: String,
+    pub status: String,
+    pub status_class: String,
+    pub capacity: String,
+    pub access_modes: String,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NetworkView {
+    pub name: String,
+    pub type_field: String,
+    pub cidr: String,
+    pub gateway: String,
+    pub dns_zone: String,
+    pub dns_server: String,
+    pub dhcp_enabled: bool,
+    pub managed: bool,
+    pub dns_alive: bool,
+    pub pod_count: i32,
+    pub status: String,
+    pub status_class: String,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BMHView {
+    pub name: String,
+    pub namespace: String,
+    pub phase: String,
+    pub status_class: String,
+    pub powered_on: bool,
+    pub network: String,
+    pub image: String,
+    pub ip: String,
+    pub mac: String,
+    pub bmc_address: String,
+    pub bmc_network: String,
+    pub bmc_username: String,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ISCSICdromView {
+    pub name: String,
+    pub phase: String,
+    pub status_class: String,
+    pub iso_file: String,
+    pub iso_size_display: String,
+    pub description: String,
+    pub target_iqn: String,
+    pub portal: String,
+    pub subscriber_count: usize,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ConfigMapView {
+    pub name: String,
+    pub namespace: String,
+    pub key_count: usize,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CheckItemView {
+    pub name: String,
+    pub status: String,
+    pub status_class: String,
+    pub message: String,
+    pub details: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct EventView {
+    pub namespace: String,
+    pub name: String,
+    pub reason: String,
+    pub message: String,
+    pub type_field: String,
+    pub type_class: String,
+    pub involved_object: String,
+    pub count: i32,
+    pub age: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DHCPReservationView {
+    pub mac: String,
+    pub ip: String,
+    pub hostname: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct StaticRecordView {
+    pub name: String,
+    pub ip: String,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SubscriberView {
+    pub name: String,
+    pub initiator_iqn: String,
+    pub since: String,
+}

@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">{{ cdrom.name }}</h1>
+<p class="page-subtitle">iSCSI CDROM details</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Phase</div>
+    <div class="stat-value"><span class="release-badge {{ cdrom.status_class }}">{{ cdrom.phase }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">ISO Size</div>
+    <div class="stat-value" style="font-size:16px">{{ cdrom.iso_size_display }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Subscribers</div>
+    <div class="stat-value blue">{{ cdrom.subscriber_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Age</div>
+    <div class="stat-value" style="font-size:16px">{{ cdrom.age }}</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">ISO Details</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <tbody>
+        <tr><td style="width:200px"><strong>ISO File</strong></td><td>{{ cdrom.iso_file }}</td></tr>
+        <tr><td><strong>Description</strong></td><td>{{ cdrom.description }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">iSCSI Connection</div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <tbody>
+        <tr><td style="width:200px"><strong>Target IQN</strong></td><td class="mono">{{ cdrom.target_iqn }}</td></tr>
+        <tr><td><strong>Portal</strong></td><td class="mono">{{ cdrom.portal }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if !subscribers.is_empty() %}
+<div class="section">
+  <div class="section-title">Subscribers <span class="count">{{ subscribers.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Initiator IQN</th>
+          <th>Since</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in subscribers %}
+        <tr>
+          <td>{{ s.name }}</td>
+          <td class="mono" style="font-size:12px">{{ s.initiator_iqn }}</td>
+          <td>{{ s.since }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

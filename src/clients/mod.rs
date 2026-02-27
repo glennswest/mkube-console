@@ -6,7 +6,11 @@ use serde::de::DeserializeOwned;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::models::k8s::{Node, Pod, PodList};
+use crate::models::k8s::{
+    BMHList, BareMetalHost, ConfigMap, ConfigMapList, ConsistencyReport, Deployment,
+    DeploymentList, EventList, ISCSICdrom, ISCSICdromList, Network, NetworkList, Node,
+    PVCList, PersistentVolumeClaim, Pod, PodList,
+};
 
 pub struct NodeClient {
     pub name: String,
@@ -172,6 +176,129 @@ impl NodeClient {
             return Err(format!("get container log failed: {}", body).into());
         }
         Ok(resp.text().await?)
+    }
+
+    // --- Deployments ---
+
+    pub async fn list_deployments(
+        &self,
+    ) -> Result<DeploymentList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/deployments").await
+    }
+
+    pub async fn get_deployment(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<Deployment, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!("/api/v1/namespaces/{}/deployments/{}", ns, name))
+            .await
+    }
+
+    // --- Networks ---
+
+    pub async fn list_networks(
+        &self,
+    ) -> Result<NetworkList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/networks").await
+    }
+
+    pub async fn get_network(
+        &self,
+        name: &str,
+    ) -> Result<Network, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!("/api/v1/networks/{}", name)).await
+    }
+
+    // --- PVCs ---
+
+    pub async fn list_pvcs(
+        &self,
+    ) -> Result<PVCList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/persistentvolumeclaims").await
+    }
+
+    pub async fn get_pvc(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<PersistentVolumeClaim, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!(
+            "/api/v1/namespaces/{}/persistentvolumeclaims/{}",
+            ns, name
+        ))
+        .await
+    }
+
+    // --- BareMetalHosts ---
+
+    pub async fn list_bmhs(
+        &self,
+    ) -> Result<BMHList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/baremetalhosts").await
+    }
+
+    pub async fn get_bmh(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<BareMetalHost, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!(
+            "/api/v1/namespaces/{}/baremetalhosts/{}",
+            ns, name
+        ))
+        .await
+    }
+
+    // --- iSCSI CDROMs ---
+
+    pub async fn list_iscsi_cdroms(
+        &self,
+    ) -> Result<ISCSICdromList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/iscsi-cdroms").await
+    }
+
+    pub async fn get_iscsi_cdrom(
+        &self,
+        name: &str,
+    ) -> Result<ISCSICdrom, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!("/api/v1/iscsi-cdroms/{}", name))
+            .await
+    }
+
+    // --- ConfigMaps ---
+
+    pub async fn list_configmaps(
+        &self,
+        ns: &str,
+    ) -> Result<ConfigMapList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!("/api/v1/namespaces/{}/configmaps", ns))
+            .await
+    }
+
+    pub async fn get_configmap(
+        &self,
+        ns: &str,
+        name: &str,
+    ) -> Result<ConfigMap, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json(&format!("/api/v1/namespaces/{}/configmaps/{}", ns, name))
+            .await
+    }
+
+    // --- Consistency ---
+
+    pub async fn get_consistency(
+        &self,
+    ) -> Result<ConsistencyReport, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/consistency").await
+    }
+
+    // --- Events ---
+
+    pub async fn list_events(
+        &self,
+    ) -> Result<EventList, Box<dyn std::error::Error + Send + Sync>> {
+        self.get_json("/api/v1/events").await
     }
 
     async fn get_json<T: DeserializeOwned>(

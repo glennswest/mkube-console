@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Networks</h1>
+<p class="page-subtitle">Cluster network definitions</p>
+
+<div class="table-wrapper" hx-get="/ui/networks" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>CIDR</th>
+        <th>Gateway</th>
+        <th>DNS Zone</th>
+        <th>DHCP</th>
+        <th>Managed</th>
+        <th>DNS</th>
+        <th>Pods</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if networks.is_empty() %}
+      <tr><td colspan="10" class="empty-state"><h3>No networks found</h3></td></tr>
+      {% else %}
+      {% for n in networks %}
+      <tr>
+        <td><a href="/ui/networks/{{ n.name }}">{{ n.name }}</a></td>
+        <td>{{ n.type_field }}</td>
+        <td class="mono">{{ n.cidr }}</td>
+        <td class="mono">{{ n.gateway }}</td>
+        <td>{{ n.dns_zone }}</td>
+        <td>{% if n.dhcp_enabled %}<span class="release-badge badge-success">Yes</span>{% else %}<span class="release-badge badge-info">No</span>{% endif %}</td>
+        <td>{% if n.managed %}<span class="release-badge badge-success">Yes</span>{% else %}<span class="release-badge badge-info">No</span>{% endif %}</td>
+        <td>{% if n.dns_alive %}<span class="release-badge badge-success">Up</span>{% else %}<span class="release-badge badge-warning">Down</span>{% endif %}</td>
+        <td>{{ n.pod_count }}</td>
+        <td>{{ n.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

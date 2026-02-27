@@ -47,6 +47,26 @@ pub fn build_router(state: AppState) -> Router {
         .route("/ui/nodes", get(ui::handle_nodes))
         .route("/ui/nodes/{name}", get(ui::handle_node_detail))
         .route("/ui/registry", get(ui::handle_registry))
+        // Deployments
+        .route("/ui/deployments", get(ui::handle_deployments))
+        .route("/ui/deployments/{namespace}/{name}", get(ui::handle_deployment_detail))
+        // Networks
+        .route("/ui/networks", get(ui::handle_networks))
+        .route("/ui/networks/{name}", get(ui::handle_network_detail))
+        // PVCs
+        .route("/ui/pvcs", get(ui::handle_pvcs))
+        // BareMetalHosts
+        .route("/ui/bmh", get(ui::handle_bmhs))
+        .route("/ui/bmh/{namespace}/{name}", get(ui::handle_bmh_detail))
+        // iSCSI CDROMs
+        .route("/ui/iscsi-cdroms", get(ui::handle_iscsi_cdroms))
+        .route("/ui/iscsi-cdroms/{name}", get(ui::handle_iscsi_cdrom_detail))
+        // ConfigMaps
+        .route("/ui/configmaps", get(ui::handle_configmaps))
+        .route("/ui/configmaps/{namespace}/{name}", get(ui::handle_configmap_detail))
+        // Operations
+        .route("/ui/consistency", get(ui::handle_consistency))
+        .route("/ui/events", get(ui::handle_events))
         // Static files
         .nest_service("/ui/static", ServeDir::new("static"))
         // Root redirect

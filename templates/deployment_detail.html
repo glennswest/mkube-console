@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% import "macros.html" as macros %}
+
+{% block page_content %}
+<h1 class="page-title">{{ deploy.name }}</h1>
+<p class="page-subtitle">{{ deploy.namespace }} namespace</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Status</div>
+    <div class="stat-value"><span class="release-badge {{ deploy.status_class }}">{{ deploy.status }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Replicas</div>
+    <div class="stat-value blue">{{ deploy.ready_replicas }}/{{ deploy.replicas }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Age</div>
+    <div class="stat-value" style="font-size:16px">{{ deploy.age }}</div>
+  </div>
+</div>
+
+{% if !pods.is_empty() %}
+<div class="section">
+  <div class="section-title">Pods <span class="count">{{ pods.len() }}</span></div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Namespace</th>
+          <th>Node</th>
+          <th>Status</th>
+          <th>IP</th>
+          <th>Ready</th>
+          <th>Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pods %}
+        {% call macros::pod_row(p) %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="section">
+  <div class="section-title">Pods</div>
+  <div class="empty-state">
+    <h3>No pods found</h3>
+    <p>No pods are owned by this deployment.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

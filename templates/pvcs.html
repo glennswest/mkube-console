@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">Persistent Volume Claims</h1>
+<p class="page-subtitle">Persistent storage for workloads</p>
+
+<div class="table-wrapper" hx-get="/ui/pvcs" hx-trigger="every 10s" hx-select=".table-wrapper" hx-swap="outerHTML">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Namespace</th>
+        <th>Status</th>
+        <th>Capacity</th>
+        <th>Access Modes</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if pvcs.is_empty() %}
+      <tr><td colspan="6" class="empty-state"><h3>No PVCs found</h3></td></tr>
+      {% else %}
+      {% for p in pvcs %}
+      <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.namespace }}</td>
+        <td><span class="release-badge {{ p.status_class }}">{{ p.status }}</span></td>
+        <td>{{ p.capacity }}</td>
+        <td>{{ p.access_modes }}</td>
+        <td>{{ p.age }}</td>
+      </tr>
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block page_content %}
+<h1 class="page-title">{{ cm_name }}</h1>
+<p class="page-subtitle">{{ cm_namespace }} namespace</p>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-label">Keys</div>
+    <div class="stat-value blue">{{ keys.len() }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Namespace</div>
+    <div class="stat-value" style="font-size:16px">{{ cm_namespace }}</div>
+  </div>
+</div>
+
+{% if keys.is_empty() %}
+<div class="empty-state">
+  <h3>No data</h3>
+  <p>This ConfigMap has no keys.</p>
+</div>
+{% else %}
+{% for key in keys %}
+<div class="section">
+  <div class="section-title">{{ key }}</div>
+  <pre class="code-block" style="background:var(--bg-secondary);padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5;border:1px solid var(--border-color)">{{ data[key] }}</pre>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}
