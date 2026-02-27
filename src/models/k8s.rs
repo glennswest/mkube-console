@@ -85,8 +85,10 @@ pub struct VolumeMount {
 pub struct PodStatus {
     #[serde(default)]
     pub phase: String,
-    #[serde(default)]
+    #[serde(default, rename = "podIP")]
     pub pod_ip: String,
+    #[serde(default, rename = "hostIP")]
+    pub host_ip: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_time: Option<String>,
     #[serde(default)]
